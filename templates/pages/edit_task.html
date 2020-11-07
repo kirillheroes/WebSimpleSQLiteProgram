@@ -1,0 +1,23 @@
+{% extends "layouts/base_layout.html" %}
+
+{% block main %}
+    <section class="card card-default w-50 mx-auto">
+        <h4 class="card-header">Редактирование задания</h4>
+        <form action="/tasks/{{ task.id }}" method="POST" class="card-body">
+            {% if error %}
+                <div class="alert alert-danger">
+                    {{ error }}
+                </div>
+            {% endif %}
+            <div class="form-group">
+                <label for="title-input">Заголовок:</label>
+                <input type="text" name="title" class="form-control" id="title-input" value="{{ task.title }}">
+            </div>
+            <div class="form-group">
+                <label for="description-input">Описание:</label>
+                <input type="text" name="description" class="form-control" id="description-input" value="{{ task.description}}">
+            </div>
+            <button type="submit" class="btn btn-primary">Отредактировать задание</button>
+        </form>
+    </section>
+{% endblock %}
