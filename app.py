@@ -9,7 +9,6 @@ app = Flask(__name__)
 # Устанавливаем ключ, необходимый для шифрования куки сессии
 app.secret_key = b'_5#y2L"F4Q8ziDec]/'
 
-
 # Описываем основные маршруты и их обработчики
 
 # Главная страница
@@ -165,10 +164,19 @@ def update_task(task_id):
         return render_template('pages/edit_task.html',
                                page_title=page_title, task=task, user=user, error='Требуется ввести описание')
 
-    Storage.update_task_by_id(task_id, request.form['title'], request.form['description'])
+    Storage.update_task_by_id(task_id, request.form['title'], request.form['description'], 0)
 
     # Делаем вид, что обновление всегда без ошибки
     # Перенаправляем на задания
+    return redirect(url_for('tasks'))
+
+
+@app.route('/task_status/<int:task_id>', methods=['POST'])
+def update_task_checked(task_id):
+    task = Storage.get_task_by_id(task_id)
+    done = not task.completed
+
+    Storage.update_task_by_id(task_id, task.title, task.description, done)
     return redirect(url_for('tasks'))
 
 

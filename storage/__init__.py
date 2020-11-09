@@ -84,14 +84,16 @@ class Storage:
         return Task(id=task[4], user_id=task[0], title=task[1], description=task[2], completed=task[3])
 
     @staticmethod
-    def update_task_by_id(id: int, title: str, desc: str):
+    def update_task_by_id(id: int, title: str, desc: str, done: bool):
         """Обновление задания
         :param id: идентификатор задания
         :type id: int
         :param title: новый заголовок задания
         :type title: str
         :param desc: новое описание задания
-        :type desc: str"""
-        db.execute("UPDATE tasks SET title=?, description=? WHERE id=?", (title, desc, id,))
+        :type desc: str
+        :param done: статус задания
+        :type done: bool"""
+        db.execute("UPDATE tasks SET title=?, description=?, completed=? WHERE id=?", (title, desc, done, id,))
         db.commit()
 
