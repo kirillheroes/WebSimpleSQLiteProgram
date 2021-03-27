@@ -13,20 +13,20 @@ class User:
 
 
 class Task:
-    """Класс задания
+    """Класс задачи
     :param id: идентификатор
     :type id: int
-    :param user_id: идентификатор пользователя
-    :type user_id: int
-    :param title: заголовок
-    :param title: str
-    :param completed: статус
-    :param completed: bool
-    :param description: описание
-    :param description: str"""
-    def __init__(self, id: int, user_id: int, title: str, description: str, completed: bool):
+    :param title: заголовок задачи
+    :type title: str
+    :param description: описание задачи
+    :type description: str
+    :param status: статус задачи
+    :type description: text
+    :param user: пользователь
+    :type user: User"""
+    def __init__(self, id: int, title: str, description: str, status: str, user: User):
         self.id = id
-        self.user_id = user_id
         self.title = title
         self.description = description
-        self.completed = completed
+        self.status = status
+        self.user = user

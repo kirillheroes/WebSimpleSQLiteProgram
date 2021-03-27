@@ -1,5 +1,6 @@
 from flask import Flask, session, render_template, redirect, request, url_for
-from entities import User, Task
+from entities import User
+from entities import Task
 from storage import Storage
 
 # Создаём приложение
@@ -7,10 +8,10 @@ app = Flask(__name__)
 
 # Конфигурируем
 # Устанавливаем ключ, необходимый для шифрования куки сессии
-app.secret_key = b'_5#y2L"F4Q8ziDec]/'
+app.secret_key = b'web34secretkeybrbrbrbr/'
+
 
 # Описываем основные маршруты и их обработчики
-
 # Главная страница
 @app.route('/')
 def home():
@@ -67,14 +68,16 @@ def registration_action():
     page_title = 'Регистрация | Auth Example'
     error = None
     # Проверяем данные
-    if request.form['password'] != request.form['password2']:
-        error = 'Пароли не совпадают'
-    if not request.form['password2']:
-        error = 'Требуется ввести повтор пароля'
-    if not request.form['password']:
-        error = 'Требуется ввести пароль'
     if not request.form['email']:
-        error = 'Требуется ввести Email'
+        error = 'Требуется ввести электронную почту!'
+    elif not request.form['password']:
+        error = 'Требуется ввести пароль!'
+    elif not request.form['password2']:
+        error = 'Требуется ввести повтор пароля!'
+    elif request.form['password'] != request.form['password2']:
+        error = 'Пароли не совпадают!'
+    elif Storage.get_user_by_email(request.form['email']):
+        error = 'Пользователь с таким email уже зарегистрирован!'
 
     # В случае ошибки рендерим тот же шаблон, но с текстом ошибки
     if error:
@@ -91,96 +94,101 @@ def registration_action():
 # Выход пользователя
 @app.route('/logout')
 def logout():
-    # Просто выкидываем его из сессии
+    # Удаляем пользователя из сессии
     session.pop('user_id')
     return redirect(url_for('home'))
 
 
-# Страница с заданиями
+# Вывод списка задач этого пользователя
 @app.route('/tasks', methods=['GET'])
-def tasks():
-    user_id = session['user_id']
-    user = Storage.get_user_by_id(user_id)
-    tasks_list = Storage.get_user_tasks_by_id(user_id)
-    if tasks_list is None:
-        tasks_list = []
-    return render_template('pages/tasks.html', user=user, tasks=tasks_list, page_title='Задачи / Auth Example')
+def show_tasks():
+    if 'user_id' in session:
+        user_id = session['user_id']
+        user = Storage.get_user_by_id(user_id)
+        tasks = Storage.get_task_by_user(user_id)
+        return render_template('pages/task_list.html', page_title='Список задач', tasks=tasks, user=user)
+    else:
+        return redirect('/login')
 
 
+# Добавление задачи       
 @app.route('/task', methods=['GET'])
-def new_task_info():
-    user_id = session['user_id']
-    user = Storage.get_user_by_id(user_id)
-    return render_template('pages/add_task.html', user=user, page_title='Добавление задания / Auth Example')
+def new_task():
+    if 'user_id' in session:
+        user_id = session['user_id']
+        user = Storage.get_user_by_id(user_id)
+        return render_template('pages/new_task.html', page_title='Добавить задачу', user=user)
+    else:
+        return redirect('/login')
 
 
+# Создание новой задачи
 @app.route('/task', methods=['POST'])
-def add_task():
-    page_title = 'Добавление задания | Auth Example'
+def create_task():
+    if 'user_id' in session:
+        user_id = session['user_id']
+        user = Storage.get_user_by_id(user_id)
 
-    user_id = session['user_id']
-    user = Storage.get_user_by_id(user_id)
+        status = "false"
+        if 'status-input' in request.form:
+            status = "true"
 
-    # Проверяем данные
-    if not request.form['title']:
-        return render_template('pages/add_task.html',
-                               page_title=page_title, user=user, error='Требуется ввести заголовок')
-    if not request.form['description']:
-        return render_template('pages/add_task.html',
-                               page_title=page_title, user=user, error='Требуется ввести описание')
-
-    user_id = session['user_id']
-    new_task = Task(None, user_id, request.form['title'], request.form['description'], 0)
-
-    Storage.add_task(new_task)
-
-    # Делаем вид, что добавление всегда без ошибки
-    # Перенаправляем на задания
-    return redirect(url_for('tasks'))
+        error = None
+        if not request.form['title-input']:
+            error = 'Необходимо ввести заголовок!'
+        if error:
+            return render_template('pages/new_task.html', page_title='Добавить задачу', error=error, user=user)
+        Storage.add_task(Task(None, request.form['title-input'], request.form['description-input'], status, user))
+        return redirect(url_for('show_tasks'))
+    else:
+        redirect(url_for('home'))
 
 
+# Получение конкретной задачи
 @app.route('/tasks/<int:task_id>', methods=['GET'])
-def edit_task(task_id):
-    user_id = session['user_id']
-    user = Storage.get_user_by_id(user_id)
-    task = Storage.get_task_by_id(task_id)
-    return render_template('pages/edit_task.html',
-                           user=user, task=task, page_title='Редактирование задания / Auth Example')
+def get_task(task_id: int):
+    if 'user_id' in session:
+        user_id = session['user_id']
+        user = Storage.get_user_by_id(user_id)
+        cur_task = Storage.get_task_by_id(task_id)
+        return render_template('pages/task.html', page_title="Отредактировать задачу", task=cur_task, user=user)
+    else:
+        return redirect('/login')
 
 
-@app.route('/tasks/<int:task_id>', methods=['POST'])
-def update_task(task_id):
-    page_title = 'Редактирование задания | Auth Example'
+# Обновление или удаление задачи
+@app.route('/task/<int:task_id>', methods=['PATCH', 'DELETE'])
+def task(task_id: int):
+    # Обновление задачи
+    if request.method == 'PATCH':
+        if 'user_id' in session:
+            user_id = session['user_id']
+            user = Storage.get_user_by_id(user_id)
+            dataObj = request.json
 
-    user_id = session['user_id']
-    user = Storage.get_user_by_id(user_id)
-    task = Storage.get_task_by_id(task_id)
+            status = "false"
+            if dataObj['status-input'] == 1:
+                status = "true"
 
-    # Проверяем данные
-    if not request.form['title']:
-        return render_template('pages/edit_task.html',
-                               page_title=page_title, task=task, user=user, error='Требуется ввести заголовок')
-    if not request.form['description']:
-        return render_template('pages/edit_task.html',
-                               page_title=page_title, task=task, user=user, error='Требуется ввести описание')
-
-    Storage.update_task_by_id(task_id, request.form['title'], request.form['description'], 0)
-
-    # Делаем вид, что обновление всегда без ошибки
-    # Перенаправляем на задания
-    return redirect(url_for('tasks'))
-
-
-@app.route('/task_status/<int:task_id>', methods=['POST'])
-def update_task_checked(task_id):
-    task = Storage.get_task_by_id(task_id)
-    done = not task.completed
-
-    Storage.update_task_by_id(task_id, task.title, task.description, done)
-    return redirect(url_for('tasks'))
+            error = None
+            if not dataObj['title-input']:
+                error = 'Необходимо ввести заголовок!'
+            if error:
+                return render_template('pages/new_task.html', page_title='Обновить задачу', error=error, user=user)
+            Storage.update_task(Task(dataObj['id'], dataObj['title-input'], dataObj['description-input'], status, None))
+            return 'ok'
+        else:
+            redirect(url_for('home'))
+    # Удаление задачи
+    elif request.method == 'DELETE':
+        if 'user_id' in session:
+            user_id = session['user_id']
+            Storage.delete_task(Task(int(request.json['id']), None, None, None, None))
+            return 'ok'
+        else:
+            return redirect('/login')
 
 
 if __name__ == '__main__':
     app.env = 'development'
     app.run(port=8080, host='127.0.0.1', debug=True)
-
